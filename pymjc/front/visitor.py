@@ -676,7 +676,9 @@ class FillSymbolTableVisitor(Visitor):
         return self.symbol_table
 
     def visit_program(self, element: Program) -> None:
-        pass
+        element.main_class.accept(self)
+        for index in range(element.class_decl_list.size()):
+            element.class_decl_list.element_at(index).accept(self)
 
     def visit_main_class(self, element: MainClass) -> None:
         pass
@@ -684,8 +686,17 @@ class FillSymbolTableVisitor(Visitor):
     def visit_class_decl_extends(self, element: ClassDeclExtends) -> None:
         pass
 
-    def visit_class_decl_simple(self, element: ClassDeclSimple) -> None:
-        pass
+    def visit_class_decl_simple(self, element: ClassDeclSimple) -> None:    
+        element.class_name.accept(self)
+        if not self.symbol_table.add_scope(element.class_name, ClassEntry()):
+            self.add_semantic_error(SemanticErrorType.ALREADY_DECLARED_CLASS)
+            
+        for index in range(element.var_decl_list.size()):
+            element.var_decl_list.element_at(index).accept(self)
+    
+        for index in range(element.method_decl_list.size()):
+            element.method_decl_list.element_at(index).accept(self)
+
 
     def visit_var_decl(self, element: VarDecl) -> None:
         pass
@@ -1156,7 +1167,10 @@ class TypeCheckingVisitor(TypeVisitor):
         return self.symbol_table
 
     def visit_program(self, element: Program) -> Type:
-        pass
+        element.main_class.accept_type(self)
+        for index in range(element.class_decl_list.size()):
+            element.class_decl_list.element_at(index).accept_type(self)
+        return None
 
     def visit_main_class(self, element: MainClass) -> Type:
         pass
@@ -1207,7 +1221,11 @@ class TypeCheckingVisitor(TypeVisitor):
         pass
     
     def visit_and(self, element: And) -> Type:
-        pass
+        left = element.left_side.accept_type(self)
+        right = element.right_side.accept_type(self)
+        if left != right:
+            self.add_semantic_error(SemanticErrorType.AND_TYPE_MISMATCH)
+        return BooleanType()
 
     def visit_less_than(self, element: LessThan) -> Type:
         pass
