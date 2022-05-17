@@ -677,11 +677,18 @@ class FillSymbolTableVisitor(Visitor):
 
     def visit_program(self, element: Program) -> None:
         element.main_class.accept(self)
+
         for index in range(element.class_decl_list.size()):
             element.class_decl_list.element_at(index).accept(self)
 
     def visit_main_class(self, element: MainClass) -> None:
-        pass
+        element.class_name_identifier.accept(self)
+        symbol_table.add_scope(element.class_name_identifier, ClassEntry()):
+
+        element.arg_name_ideintifier.accept(self)
+        
+        element.statement.accept(self)
+
 
     def visit_class_decl_extends(self, element: ClassDeclExtends) -> None:
         pass
@@ -701,7 +708,7 @@ class FillSymbolTableVisitor(Visitor):
             current = element.method_decl_list.element_at(index)
             current.accept(self)
             if not self.symbol_table.add_field(current):
-                self.add_semantic_error(SemanticErrorType.ALREADY_DECLARED_VAR)
+                self.add_semantic_error(SemanticErrorType.ALREADY_DECLARED_METHOD)
 
 
     def visit_var_decl(self, element: VarDecl) -> None:
@@ -716,23 +723,25 @@ class FillSymbolTableVisitor(Visitor):
 
 
     def visit_int_array_type(self, element: IntArrayType) -> None:
-        pass
+        return None
     
     def visit_boolean_type(self, element: BooleanType) -> None:
-        pass
+        return None
     
     def visit_integer_type(self, element: IntegerType) -> None:
-        pass
+        return None
 
     def visit_identifier_type(self, element: IdentifierType) -> None:
-        pass
+        element.name.accept(self)
 
-    
     def visit_block(self, element: Block) -> None:
-        pass
+        for index in range(element.statement_list.size()):
+            element.statement_list.element_at(index).accept(self)
 
     def visit_if(self, element: If) -> None:
-        pass
+        element.condition_exp.accept(self)
+        element.if_statement.accept(self)
+        element.else_statement.accept(self)
   
     def visit_while(self, element: While) -> None:
         pass
