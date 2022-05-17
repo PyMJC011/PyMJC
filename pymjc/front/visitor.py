@@ -692,15 +692,21 @@ class FillSymbolTableVisitor(Visitor):
             self.add_semantic_error(SemanticErrorType.ALREADY_DECLARED_CLASS)
             
         for index in range(element.var_decl_list.size()):
-            element.var_decl_list.element_at(index).accept(self)
-    
+            current = element.var_decl_list.element_at(index)
+            current.accept(self)
+            if not self.symbol_table.add_field(current):
+                self.add_semantic_error(SemanticErrorType.ALREADY_DECLARED_VAR)
+
         for index in range(element.method_decl_list.size()):
-            element.method_decl_list.element_at(index).accept(self)
+            current = element.method_decl_list.element_at(index)
+            current.accept(self)
+            if not self.symbol_table.add_field(current):
+                self.add_semantic_error(SemanticErrorType.ALREADY_DECLARED_VAR)
 
 
     def visit_var_decl(self, element: VarDecl) -> None:
-        pass
-     
+        element.type.accept(self)
+        element.name.accept(self)
 
     def visit_method_decl(self, element: MethodDecl) -> None:
         pass
