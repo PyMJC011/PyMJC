@@ -88,7 +88,7 @@ class MJParser(Parser):
 
     @_('Empty')
     def FormalParamListOpt(self, p):
-        return p # Por ser opcional: None vai ser retornado
+        return FormalList() # Por ser opcional: None vai ser retornado
         
     @_('FormalParamStar')
     def FormalParamListOpt(self, p):            
@@ -96,9 +96,9 @@ class MJParser(Parser):
 
     @_('FormalParam')
     def FormalParamStar(self, p):
-        FormalList = FormalList()
-        FormalList.add_element(p.FormalParam)
-        return FormalList
+        formalList = FormalList()
+        formalList.add_element(p.FormalParam)
+        return formalList
 
     @_('FormalParamStar COMMA FormalParam')
     def FormalParamStar(self, p):
@@ -206,7 +206,7 @@ class MJParser(Parser):
 
     @_('Empty')
     def ExpressionListOpt(self, p):
-        return p # Por ser opcional: None vai ser retornado
+        return ExpList() # Por ser opcional: None vai ser retornado
 
     @_('ExpressionListStar')
     def ExpressionListOpt(self, p):
@@ -214,15 +214,16 @@ class MJParser(Parser):
 
     @_('Expression')
     def ExpressionListStar(self, p):
-        ExpList = ExpList()
-        ExpList.add_element(p.Expression)
-        return ExpList
+        expList = ExpList()
+        expList.add_element(p.Expression)
+        return expList
 
     @_('ExpressionListStar COMMA Expression')
     def ExpressionListStar(self, p):
         p.ExpressionListStar.add_element(p.Expression)
         return p.ExpressionListStar
-    #alerta: possivelmente faltou o caso empty de ExpressionListStar
+    
+	#alerta: possivelmente faltou o caso empty de ExpressionListStar
     @_('THIS')
     def Expression(self, p):
         return This()
@@ -245,7 +246,7 @@ class MJParser(Parser):
 
     @_('Identifier')
     def Expression(self, p):
-        return IdentifierExp(p.Identifier)
+        return IdentifierExp(p.Identifier.name)
 
     @_('Literal')
     def Expression(self, p):
@@ -256,7 +257,7 @@ class MJParser(Parser):
     ###################################
     @_('ID')
     def Identifier(self, p):
-        return Identifier(p.ID)
+        return Identifier(str(p.ID))
 
     @_('')
     def Empty(self, p):
@@ -268,26 +269,23 @@ class MJParser(Parser):
     ##################################
     @_('BooleanLiteral')
     def Literal(self, p):
-        if p.BooleanLiteral == True:
-            return TrueExp()
-        else:
-            return FalseExp() 
+        return p.BooleanLiteral 
 
     @_('IntLiteral')
     def Literal(self, p):
-        return IntegerLiteral(p.IntLiteral)
+        return p.IntLiteral
 
     @_('TRUE')
     def BooleanLiteral(self, p):
-        return True
+        return TrueExp()
 
     @_('FALSE')
     def BooleanLiteral(self, p):
-        return False
+        return FalseExp()
 
     @_('NUM')
     def IntLiteral(self, p):
-        return int(p)
+        return IntegerLiteral(int(p.NUM))
 
     def error(self, p):
         MJLogger.parser_log(self.src_file_name, p.lineno, p.value[0])
