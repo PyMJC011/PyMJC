@@ -245,7 +245,7 @@ class MJParser(Parser):
 
     @_('Identifier')
     def Expression(self, p):
-        return p.Identifier
+        return IdentifierExp(p.Identifier)
 
     @_('Literal')
     def Expression(self, p):
