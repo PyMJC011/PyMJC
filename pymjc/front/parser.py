@@ -15,7 +15,7 @@ class MJParser(Parser):
                   ('left', PLUS, MINUS),        
                   ('left', TIMES),
                   ('right', NOT),
-                  ('right', DOT)
+                  ('left', DOT)
                  )
                  
     tokens = MJLexer.tokens
@@ -30,6 +30,7 @@ class MJParser(Parser):
     ###################################    
     @_('MainClass ClassDeclarationStar')
     def Goal(self, p):
+        p.ClassDeclarationStar.class_decl_list.reverse()
         return Program(p.MainClass, p.ClassDeclarationStar)
     
     @_('CLASS Identifier LEFTBRACE PUBLIC STATIC VOID MAIN LEFTPARENT STRING LEFTSQRBRACKET RIGHTSQRBRACKET Identifier RIGHTPARENT LEFTBRACE Statement RIGHTBRACE RIGHTBRACE')
@@ -47,18 +48,19 @@ class MJParser(Parser):
 
     @_('CLASS Identifier SuperOpt LEFTBRACE VarDeclarationStar MethodDeclarationStar RIGHTBRACE')
     def ClassDeclaration(self, p):
-        if p.SuperOpt: # se não for None:
-            return ClassDeclExtends(p.Identifier, p.SuperOpt, p.VarDeclarationStar, p.MethodDeclarationStar)
-        else:
+        if p.SuperOpt is None:
             return ClassDeclSimple(p.Identifier, p.VarDeclarationStar, p.MethodDeclarationStar)
+        
+        return ClassDeclExtends(p.Identifier, p.SuperOpt, p.VarDeclarationStar, p.MethodDeclarationStar)
+
 
     @_('Empty')
     def SuperOpt(self, p):
-        return p # Por ser opcional: None vai ser retornado
+        return p.Empty
     
     @_('EXTENDS Identifier')
     def SuperOpt(self, p):
-        return Identifier(p.Identifier)
+        return p.Identifier
 
     @_('Empty')
     def VarDeclarationStar(self, p):
@@ -84,11 +86,12 @@ class MJParser(Parser):
 
     @_('PUBLIC Type Identifier LEFTPARENT FormalParamListOpt RIGHTPARENT LEFTBRACE VarDeclarationStar StatementStar RETURN Expression SEMICOLON RIGHTBRACE')
     def MethodDeclaration(self, p):
+        p.StatementStar.statement_list.reverse()
         return MethodDecl(p.Type, p.Identifier, p.FormalParamListOpt, p.VarDeclarationStar, p.StatementStar, p.Expression)
 
     @_('Empty')
     def FormalParamListOpt(self, p):
-        return FormalList() # Por ser opcional: None vai ser retornado
+        return FormalList()
         
     @_('FormalParamStar')
     def FormalParamListOpt(self, p):            
@@ -96,9 +99,9 @@ class MJParser(Parser):
 
     @_('FormalParam')
     def FormalParamStar(self, p):
-        formalList = FormalList()
-        formalList.add_element(p.FormalParam)
-        return formalList
+        formal_list = FormalList()
+        formal_list.add_element(p.FormalParam)
+        return formal_list
 
     @_('FormalParamStar COMMA FormalParam')
     def FormalParamStar(self, p):
@@ -108,8 +111,6 @@ class MJParser(Parser):
     @_('Type Identifier')
     def FormalParam(self, p):
         return Formal(p.Type, p.Identifier)
-    
-    #alerta: possivelmente faltou o caso empty de FormalParamStar
         
     ###################################
     #Type Declarations                #
@@ -129,7 +130,7 @@ class MJParser(Parser):
 
     @_('Identifier')
     def Type(self, p):
-        return IdentifierType(p.Identifier)
+        return IdentifierType(p.Identifier.name)
 
     ###################################
     #Statements Declarations          #
@@ -206,7 +207,7 @@ class MJParser(Parser):
 
     @_('Empty')
     def ExpressionListOpt(self, p):
-        return ExpList() # Por ser opcional: None vai ser retornado
+        return ExpList()
 
     @_('ExpressionListStar')
     def ExpressionListOpt(self, p):
@@ -214,16 +215,15 @@ class MJParser(Parser):
 
     @_('Expression')
     def ExpressionListStar(self, p):
-        expList = ExpList()
-        expList.add_element(p.Expression)
-        return expList
+        exp_list = ExpList()
+        exp_list.add_element(p.Expression)
+        return exp_list
 
     @_('ExpressionListStar COMMA Expression')
     def ExpressionListStar(self, p):
         p.ExpressionListStar.add_element(p.Expression)
         return p.ExpressionListStar
-    
-	#alerta: possivelmente faltou o caso empty de ExpressionListStar
+
     @_('THIS')
     def Expression(self, p):
         return This()
@@ -269,7 +269,7 @@ class MJParser(Parser):
     ##################################
     @_('BooleanLiteral')
     def Literal(self, p):
-        return p.BooleanLiteral 
+        return p.BooleanLiteral
 
     @_('IntLiteral')
     def Literal(self, p):
