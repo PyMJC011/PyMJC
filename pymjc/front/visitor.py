@@ -522,7 +522,6 @@ class DepthFirstVisitor(Visitor):
         return None
 
 
-#TODO
 class FillSymbolTableVisitor(Visitor):
     def __init__(self) -> None:
         super().__init__()
@@ -1605,29 +1604,31 @@ class TranslateVisitor(IRVisitor):
         self.var_access = {}
         return None
 
-    @abstractmethod
     def visit_formal(self, element: Formal) -> translate.Exp:
-        pass
+        element.type.accept_ir(self)
+        element.name_id.accept_ir(self)
+        return None
 
-    @abstractmethod
     def visit_int_array_type(self, element: IntArrayType) -> translate.Exp:
-        pass
+        element.type.accept_ir(self)
+        return None ##checar
 
-    @abstractmethod
     def visit_boolean_type(self, element: BooleanType) -> translate.Exp:
-        pass
+        element.type.accept_ir(self)
+        return None ##checar
 
-    @abstractmethod
     def visit_integer_type(self, element: IntegerType) -> translate.Exp:
-        pass
+        element.type.accept_ir(self)
+        return None ##checar
 
-    @abstractmethod
     def visit_identifier_type(self, element: IdentifierType) -> translate.Exp:
-        pass
+        element.type.accept_ir(self)
+        return None ##checar
 
-    @abstractmethod
     def visit_block(self, element: Block) -> translate.Exp:
-        pass
+        for index in range(element.statement_list.size()):
+            element.statement_list.element_at(index).accept_ir(self)
+        return None ##checar
 
     @abstractmethod
     def visit_if(self, element: If) -> translate.Exp:
@@ -1648,29 +1649,42 @@ class TranslateVisitor(IRVisitor):
 
         return translate.Exp(tree.ESEQ(assign, tree.CONST(0))) 
 
-    @abstractmethod
     def visit_array_assign(self, element: ArrayAssign) -> translate.Exp:
-        pass
+        array: translate.Exp = element.array_name_id.accept_ir(self)
+        array_index: translate.Exp = element.array_exp.accept_ir(self)
+        exp: translate.Exp = element.right_side_exp.accept_ir(self)
+        ##checar : como que é recolhido pelo código um valor da array dado seu index
+        assign: tree.MOVE = tree.MOVE(var.un_ex(), exp.un_ex()) # <- mudar
 
-    @abstractmethod
+        return translate.Exp(tree.ESEQ(assign, tree.CONST(0))) ##checar
+
     def visit_and(self, element: And) -> translate.Exp:
-        pass
+        l_exp: translate.Exp = element.left_side_exp.accept_ir(self)
+        r_exp: translate.Exp = element.right_side_exp.accept_ir(self)
+        and_exp: tree.BINOP = tree.BINOP(op=AND, left_exp=l_exp.un_ex(), right_exp=r_exp.un_ex())
+        return translate.DataFrag(and_exp) ##checar
 
     @abstractmethod
     def visit_less_than(self, element: LessThan) -> translate.Exp:
         pass
 
-    @abstractmethod
     def visit_plus(self, element: Plus) -> translate.Exp:
-        pass
+        l_exp: translate.Exp = element.left_side_exp.accept_ir(self)
+        r_exp: translate.Exp = element.right_side_exp.accept_ir(self)
+        plus: tree.BINOP = tree.BINOP(op=PLUS, left_exp=l_exp, right_exp=r_exp)
+        return translate.DataFrag(plus) ##checar
 
-    @abstractmethod
     def visit_minus(self, element: Minus) -> translate.Exp:
-        pass
+        l_exp: translate.Exp = element.left_side_exp.accept_ir(self)
+        r_exp: translate.Exp = element.right_side_exp.accept_ir(self)
+        minus: tree.BINOP = tree.BINOP(op=MINUS, left_exp=l_exp, right_exp=r_exp)
+        return translate.DataFrag(minus) ##checar
 
-    @abstractmethod
     def visit_times(self, element: Times) -> translate.Exp:
-        pass
+        l_exp: translate.Exp = element.left_side_exp.accept_ir(self)
+        r_exp: translate.Exp = element.right_side_exp.accept_ir(self)
+        mul: tree.BINOP = tree.BINOP(op=MUL, left_exp=l_exp, right_exp=r_exp)
+        return translate.DataFrag(mul) ##checar
 
     @abstractmethod
     def visit_array_lookup(self, element: ArrayLookup) -> translate.Exp:
@@ -1712,10 +1726,9 @@ class TranslateVisitor(IRVisitor):
     def visit_new_object(self, element: NewObject) -> translate.Exp:
         pass
 
-
-    @abstractmethod
     def visit_not(self, element: Not) -> translate.Exp:
-        pass
+        exp: translate.Exp = element.negated_exp.accept_ir(self)
+        #not_exp: translate.Exp = ##checar
 
     @abstractmethod
     def visit_identifier(self, element: Identifier) -> translate.Exp:
