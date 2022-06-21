@@ -1550,7 +1550,17 @@ class TranslateVisitor(IRVisitor):
 
 
     def visit_class_decl_extends(self, element: ClassDeclExtends) -> translate.Exp:
-        pass
+        element.class_name_id.accept_ir(self)
+        element.super_class_name_id.accept_ir(self)
+        self.symbol_table.set_curr_class(element.class_name_id.name)
+
+        for index in range(element.var_decl_list.size()):
+            element.var_decl_list.element_at(index).accept_ir(self)
+        
+        for index in range(element.method_decl_list.size()):
+            element.method_decl_list.element_at(index).accept_ir(self)
+
+        return None ##checar se é necessário mais coisas, como adicionar os métodos da super classe à algo de alguma forma
 
     def visit_class_decl_simple(self, element: ClassDeclSimple) -> translate.Exp:
         element.class_name_id.accept_ir(self)
@@ -1610,19 +1620,19 @@ class TranslateVisitor(IRVisitor):
         return None
 
     def visit_int_array_type(self, element: IntArrayType) -> translate.Exp:
-        element.type.accept_ir(self)
+        #element.type.accept_ir(self)
         return None ##checar
 
     def visit_boolean_type(self, element: BooleanType) -> translate.Exp:
-        element.type.accept_ir(self)
+        #element.type.accept_ir(self)
         return None ##checar
 
     def visit_integer_type(self, element: IntegerType) -> translate.Exp:
-        element.type.accept_ir(self)
+        #element.type.accept_ir(self)
         return None ##checar
 
     def visit_identifier_type(self, element: IdentifierType) -> translate.Exp:
-        element.type.accept_ir(self)
+        #element.type.accept_ir(self)
         return None ##checar
 
     def visit_block(self, element: Block) -> translate.Exp:
@@ -1686,9 +1696,10 @@ class TranslateVisitor(IRVisitor):
         mul: tree.BINOP = tree.BINOP(op=MUL, left_exp=l_exp, right_exp=r_exp)
         return translate.DataFrag(mul) ##checar
 
-    @abstractmethod
     def visit_array_lookup(self, element: ArrayLookup) -> translate.Exp:
-        pass
+        outside: translate.Exp = element.out_side_exp.accept_ir(self)
+        inside: translate.Exp = element.in_side_exp.accept_ir(self) ##checar
+        return translate.Exp(tree.MEM(tree.BINOP(PLUS, tree.MEM(e), tree.BINOP(MUL, inside, CONST(w))))) #tree.MEM(e) é pra ser o endereço do array, w é pra ser o tamanho da palavra
 
     @abstractmethod
     def visit_array_length(self, element: ArrayLength) -> translate.Exp:
@@ -1728,7 +1739,7 @@ class TranslateVisitor(IRVisitor):
 
     def visit_not(self, element: Not) -> translate.Exp:
         exp: translate.Exp = element.negated_exp.accept_ir(self)
-        #not_exp: translate.Exp = ##checar
+        return translate.Exp(tree.BINOP(XOR, CONST(1), exp))
 
     @abstractmethod
     def visit_identifier(self, element: Identifier) -> translate.Exp:
