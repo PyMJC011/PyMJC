@@ -1672,29 +1672,31 @@ class TranslateVisitor(IRVisitor):
         l_exp: translate.Exp = element.left_side_exp.accept_ir(self)
         r_exp: translate.Exp = element.right_side_exp.accept_ir(self)
         and_exp: tree.BINOP = tree.BINOP(op=AND, left_exp=l_exp.un_ex(), right_exp=r_exp.un_ex())
-        return translate.DataFrag(and_exp) ##checar
+        return translate.Exp(and_exp) ##checar
 
-    @abstractmethod
     def visit_less_than(self, element: LessThan) -> translate.Exp:
-        pass
+        l_exp: translate.Exp = element.left_side_exp.accept_ir(self)
+        r_exp: translate.Exp = element.right_side_exp.accept_ir(self)
+        lt_exp: tree.BINOP = tree.BINOP(op=AND, left_exp=l_exp.un_ex(), right_exp=r_exp.un_ex())
+        return translate.Exp(lt_exp) ##checar
 
     def visit_plus(self, element: Plus) -> translate.Exp:
         l_exp: translate.Exp = element.left_side_exp.accept_ir(self)
         r_exp: translate.Exp = element.right_side_exp.accept_ir(self)
         plus: tree.BINOP = tree.BINOP(op=PLUS, left_exp=l_exp, right_exp=r_exp)
-        return translate.DataFrag(plus) ##checar
+        return translate.Exp(plus) ##checar
 
     def visit_minus(self, element: Minus) -> translate.Exp:
         l_exp: translate.Exp = element.left_side_exp.accept_ir(self)
         r_exp: translate.Exp = element.right_side_exp.accept_ir(self)
         minus: tree.BINOP = tree.BINOP(op=MINUS, left_exp=l_exp, right_exp=r_exp)
-        return translate.DataFrag(minus) ##checar
+        return translate.Exp(minus) ##checar
 
     def visit_times(self, element: Times) -> translate.Exp:
         l_exp: translate.Exp = element.left_side_exp.accept_ir(self)
         r_exp: translate.Exp = element.right_side_exp.accept_ir(self)
         mul: tree.BINOP = tree.BINOP(op=MUL, left_exp=l_exp, right_exp=r_exp)
-        return translate.DataFrag(mul) ##checar
+        return translate.Exp(mul) ##checar
 
     def visit_array_lookup(self, element: ArrayLookup) -> translate.Exp:
         outside: translate.Exp = element.out_side_exp.accept_ir(self)
@@ -1705,13 +1707,19 @@ class TranslateVisitor(IRVisitor):
     def visit_array_length(self, element: ArrayLength) -> translate.Exp:
         pass
 
-    @abstractmethod
     def visit_call(self, element: Call) -> translate.Exp:
-        pass
+        callee: translate.Exp = element.callee_exp.accept_ir(self)
+        element.callee_name_id.accept_ir(self)
 
-    @abstractmethod
+        arg_list: tree.ExpList()
+        for index in range(element.arg_list.size()):
+            current_arg: translate.Exp = element.arg_list.element_at(index).accept_ir(self)
+            arg_list.add_tail(current_arg)
+
+        return translate.ESEQ(tree.CALL(callee, arg_list),tree.CONST(0))
+
     def visit_integer_literal(self, element: IntegerLiteral) -> translate.Exp:
-        pass
+        return translate.Exp(tree.CONST(element.value))
 
     @abstractmethod
     def visit_true_exp(self, element: TrueExp) -> translate.Exp:
@@ -1739,7 +1747,7 @@ class TranslateVisitor(IRVisitor):
 
     def visit_not(self, element: Not) -> translate.Exp:
         exp: translate.Exp = element.negated_exp.accept_ir(self)
-        return translate.Exp(tree.BINOP(XOR, CONST(1), exp))
+        return translate.Exp(tree.BINOP(XOR, CONST(1), exp)) # not é equivalente à 1 XOR exp
 
     @abstractmethod
     def visit_identifier(self, element: Identifier) -> translate.Exp:
