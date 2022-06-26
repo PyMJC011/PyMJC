@@ -70,31 +70,31 @@
 
 1. Qual é o nome do relator?
 
-    > Escreva sua resposta aqui
+    > Luis Fernando Bastos Rego
 
 2. A etapa foi completamente ou parcialmente concluída?
 
-    > Escreva sua resposta aqui
+    > Parcialmente concluída
 
 3. No caso de parcialmente concluída, o que não foi concluído?
 
-    > Escreva sua resposta aqui
+    > Não foi concluída a implementação dos seguintes visitors: array_assign, new_array, if, while, print, identifier, identifier_exp
 
 4. O programa passa nos testes automatizados?
     
-    > Escreva sua resposta aqui
+    > Não se aplica.
 
 5. Algum erro de execução foi encontrado para alguma das entradas? Quais?
     
-    > Escreva sua resposta aqui
+    > Não se aplica.
 
 6. Quais as dificuldades encontradas para realização da etapa do projeto?
     
-    > Escreva sua resposta aqui
+    > As dificuldades foram em conseguir utilizar o framework do projeto, pois as implementações diferem das aulas do Prof. Heron e das implementações já existentes nos livros e site da Cambridge, além de que as implementações do Prof. Heron também são diferentes que essas outras implementações.
 
 7. Qual a participação de cada membro da equipe na etapa de execução?
     
-    > Escreva sua resposta aqui
+    > Ambos fizeram o trabalho em conjunto.
 
 
 # 4º Relatóio: Etapa AI-d (Seleção de Instruções)
