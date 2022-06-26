@@ -1632,9 +1632,15 @@ class TranslateVisitor(IRVisitor):
         return None 
 
     def visit_block(self, element: Block) -> translate.Exp:
-        for index in range(element.statement_list.size()):
-            element.statement_list.element_at(index).accept_ir(self)
-        return None 
+        size = element.statement_list.size()
+        if size == 0:
+            return None 
+        elif size == 1:
+            return translate.Exp(tree.ESEQ(element.statement_list.element_at(0).accept_ir(self).un_ex()), tree.CONST(0))
+        else:
+            for i in range(size):
+                block = tree.SEQ(block, tree.EXP(element.statement_list.element_at(i).accept_ir(self).un_ex()))
+            return block
 
     @abstractmethod
     def visit_if(self, element: If) -> translate.Exp:
@@ -1660,7 +1666,7 @@ class TranslateVisitor(IRVisitor):
         array_index: translate.Exp = element.array_exp.accept_ir(self)
         exp: translate.Exp = element.right_side_exp.accept_ir(self)
         ##checar : como que é recolhido pelo código um valor da array dado seu index
-        assign: tree.MOVE = tree.MOVE(var.un_ex(), exp.un_ex()) # <- mudar
+        assign: tree.MOVE = tree.MOVE(array.un_ex(), exp.un_ex()) # <- mudar
 
         return translate.Exp(tree.ESEQ(assign, tree.CONST(0))) ##checar
 
@@ -1700,11 +1706,11 @@ class TranslateVisitor(IRVisitor):
 
         label = temp.Label(element.out_side_exp.name, element.out_side_exp)
         w = self.current_frame.word_size
-        return translate.Exp(tree.MEM(tree.BINOP(PLUS, tree.MEM(label), tree.BINOP(MUL, inside, CONST(w))))) #tree.MEM(e) é pra ser o endereço do array, w é pra ser o tamanho da palavra
+        return translate.Exp(tree.MEM(tree.BINOP(PLUS, tree.MEM(label), tree.BINOP(MUL, inside, tree.CONST(w))))) #tree.MEM(e) é pra ser o endereço do array, w é pra ser o tamanho da palavra
 
-    @abstractmethod
     def visit_array_length(self, element: ArrayLength) -> translate.Exp:
-        pass
+        element.length_exp.accept_ir(self)
+        return None 
 
     def visit_call(self, element: Call) -> translate.Exp:
         callee: translate.Exp = element.callee_exp.accept_ir(self)
@@ -1722,21 +1728,18 @@ class TranslateVisitor(IRVisitor):
     def visit_integer_literal(self, element: IntegerLiteral) -> translate.Exp:
         return translate.Exp(tree.CONST(element.value))
 
-    @abstractmethod
     def visit_true_exp(self, element: TrueExp) -> translate.Exp:
-        pass
+        return translate.Exp(tree.CONST(1))
 
-    @abstractmethod
     def visit_false_exp(self, element: FalseExp) -> translate.Exp:
-        pass
+        return translate.Exp(tree.CONST(0))
 
     @abstractmethod
     def visit_identifier_exp(self, element: IdentifierExp) -> translate.Exp:
         pass
 
-    @abstractmethod
     def visit_this(self, element: This) -> translate.Exp:
-        pass
+        return translate.Exp(tree.TEMP(temp.Temp()))
 
     def visit_new_array(self, element: NewArray) -> translate.Exp:
         new_array_size: translate.Exp = element.new_exp.accept_ir(self).un_ex()
