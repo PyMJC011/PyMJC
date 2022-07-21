@@ -37,7 +37,7 @@ class RegAlloc (temp.TempMap):
         self.nodeAliasTable = Dict[graph.Node, graph.Node]
         self.nodeColorTable = Dict[graph.Node, graph.Node]
         self.generatedSpillTemps = List[temp.Temp]
-        mainProcedure()
+        self.mainProcedure()
 
 
     def mainProcedure(self):
@@ -45,48 +45,48 @@ class RegAlloc (temp.TempMap):
         #para emular o do while, faremos um passo anterior ao while:
         # do:
         shallContinue = True
-        LivenessAnalysis() 
-        Init() 
-        Build() 
-        MakeWorklist() 
+        self.LivenessAnalysis() 
+        self.Init() 
+        self.Build() 
+        self.MakeWorklist() 
 
-        while (simpliflyWorkList.size() or worklistMoveNodes.size() != 0 or freezeWorklist.size() != 0 or spillWorklist.size() != 0)!= 0:
-            Simplifly()
-            if worklistMoveNodes.size() != 0:
-                Coalesce()
-            elif freezeWorklist.size() != 0:
-                Freeze()
-            elif spillWorklist.size() != 0:
-                SelectSpill()
+        while (len(self.simpliflyWorkList) or len(self.worklistMoveNodes) != 0 or len(self.freezeWorklist) != 0 or len(self.spillWorklist) != 0)!= 0:
+            self.Simplifly()
+            if len(self.worklistMoveNodes) != 0:
+                self.Coalesce()
+            elif len(self.freezeWorklist) != 0:
+                self.Freeze()
+            elif len(self.spillWorklist) != 0:
+                self.SelectSpill()
 
-        assignColors()
-        if (spillNodes.size() != 0):
-            RewriteProgram()
+        self.assignColors()
+        if (len(self.spillNodes) != 0):
+            self.RewriteProgram()
             shallContinue = True
       
         # while:
         while shallContinue:
             shallContinue = False
-            LivenessAnalysis() 
-            Init() 
-            Build() 
-            MakeWorklist() 
+            self.LivenessAnalysis() 
+            self.Init() 
+            self.Build() 
+            self.MakeWorklist() 
 
-            while (simpliflyWorkList.size() or worklistMoveNodes.size() != 0 or freezeWorklist.size() != 0 or spillWorklist.size() != 0)!= 0:
-                Simplifly()
-                if worklistMoveNodes.size() != 0:
-                    Coalesce()
-                elif freezeWorklist.size() != 0:
-                    Freeze()
-                elif spillWorklist.size() != 0:
-                    SelectSpill()
+            while (len(self.simpliflyWorkList) or len(self.worklistMoveNodes) != 0 or len(self.freezeWorklist) != 0 or len(self.spillWorklist) != 0)!= 0:
+                self.Simplifly()
+                if len(self.worklistMoveNodes) != 0:
+                    self.Coalesce()
+                elif len(self.freezeWorklist) != 0:
+                    self.Freeze()
+                elif len(self.spillWorklist) != 0:
+                    self.SelectSpill()
 
-            assignColors()
-            if (spillNodes.size() != 0):
-                RewriteProgram()
+            self.assignColors()
+            if (len(self.spillNodes) != 0):
+                self.RewriteProgram()
                 shallContinue = True
 
-        FinalStep()
+        self.FinalStep()
 
         
     def LivenessAnalisys(self) -> None:
@@ -197,7 +197,7 @@ class RegAlloc (temp.TempMap):
 
 
     def assignColors(self):
-        while (not self.nodeStack.size() == 0):
+        while (not len(self.nodeStack) == 0):
             n: graph.Node = self.nodeStack.pop()
             okColors: graph.NodeList() = self.preColoredNodes
 
@@ -209,7 +209,7 @@ class RegAlloc (temp.TempMap):
                 used.addAll(self.normalColoredNodes)
                 if graph.Graph.in_list(w, used):
                     graph.Graph.delete_node(w, self.nodeColorTable)
-            if (okColors.size() == 0):
+            if (len(okColors) == 0):
                 self.spillNodes.append(n)
             else:
                 self.normalColoredNodes.append(n)
