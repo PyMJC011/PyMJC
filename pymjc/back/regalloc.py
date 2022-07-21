@@ -37,8 +37,58 @@ class RegAlloc (temp.TempMap):
         self.nodeAliasTable = Dict[graph.Node, graph.Node]
         self.nodeColorTable = Dict[graph.Node, graph.Node]
         self.generatedSpillTemps = List[temp.Temp]
-        #TODO
+        mainProcedure()
 
+
+    def mainProcedure(self):
+        #TODO
+        #para emular o do while, faremos um passo anterior ao while:
+        # do:
+        shallContinue = True
+        LivenessAnalysis() 
+        Init() 
+        Build() 
+        MakeWorklist() 
+
+        while (simpliflyWorkList.size() or worklistMoveNodes.size() != 0 or freezeWorklist.size() != 0 or spillWorklist.size() != 0)!= 0:
+            Simplifly()
+            if worklistMoveNodes.size() != 0:
+                Coalesce()
+            elif freezeWorklist.size() != 0:
+                Freeze()
+            elif spillWorklist.size() != 0:
+                SelectSpill()
+
+        assignColors()
+        if (spillNodes.size() != 0):
+            RewriteProgram()
+            shallContinue = True
+      
+        # while:
+        while shallContinue:
+            shallContinue = False
+            LivenessAnalysis() 
+            Init() 
+            Build() 
+            MakeWorklist() 
+
+            while (simpliflyWorkList.size() or worklistMoveNodes.size() != 0 or freezeWorklist.size() != 0 or spillWorklist.size() != 0)!= 0:
+                Simplifly()
+                if worklistMoveNodes.size() != 0:
+                    Coalesce()
+                elif freezeWorklist.size() != 0:
+                    Freeze()
+                elif spillWorklist.size() != 0:
+                    SelectSpill()
+
+            assignColors()
+            if (spillNodes.size() != 0):
+                RewriteProgram()
+                shallContinue = True
+
+        FinalStep()
+
+        
     def LivenessAnalisys(self) -> None:
         self.assemFlowGraph = flowgraph.AssemFlowGraph(self.instrs)
         self.livenessOutput = Liveness(self.assemFlowGraph)
@@ -145,6 +195,31 @@ class RegAlloc (temp.TempMap):
             else:
                 self.simplifyWorklist.append(n)
 
+
+    def assignColors(self):
+        while (not self.nodeStack.size() == 0):
+            n: graph.Node = self.nodeStack.pop()
+            okColors: graph.NodeList() = self.preColoredNodes
+
+            if graph.Graph.in_list(n, self.preColoredNodes):
+                continue
+            graph.Graph.delete_node(self.livenessOutput.tnode(self.frame.FP()),okColors)
+            for w in n.adj():
+                used: graph.NodeList() = self.preColoredNodes
+                used.addAll(self.normalColoredNodes)
+                if graph.Graph.in_list(w, used):
+                    graph.Graph.delete_node(w, self.nodeColorTable)
+            if (okColors.size() == 0):
+                self.spillNodes.append(n)
+            else:
+                self.normalColoredNodes.append(n)
+                for c in okColors:
+                    self.nodeColorTable[n.to_string()] = c
+        # color[n] ← color[GetAlias(n)]
+        for n in self.coalesceNodes:
+            self.nodeColorTable[n] = self.nodeColorTable[n.to_string()] 
+            
+            
     def temp_map(self, temp: temp.Temp) -> str:
         string : str = self.frame.temp_map(temp)
         if string == "":
