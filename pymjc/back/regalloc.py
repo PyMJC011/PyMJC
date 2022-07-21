@@ -12,6 +12,10 @@ class RegAlloc (temp.TempMap):
         self.instrs: assem.InstrList = instr_list
         #TODO
 
+    def LivenessAnalisys(self) -> None:
+        self.assemFlowGraph = flowgraph.AssemFlowGraph(self.instrs)
+        self.livinessOutput = Liveness(self.assemFlowGraph)
+
     def temp_map(self, temp: temp.Temp) -> str:
         #TODO
         return temp.to_string()
