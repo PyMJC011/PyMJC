@@ -1,4 +1,6 @@
 from __future__ import annotations
+from inspect import getabsfile
+from tkinter.messagebox import NO
 from typing import *
 from abc import abstractmethod
 import sys
@@ -68,7 +70,7 @@ class RegAlloc (temp.TempMap):
         self.nodeColorTable.clear();
         self.nodeDegreeTable.clear();
 
-        for counter in range(0, self.frame.registers().size()):
+        for counter in range(0, len(self.frame.registers())):
             temp : temp.Temp = self.frame.registers()[counter]
             node : graph.Node = self.livenessOutput.tnode(temp)
 
@@ -90,11 +92,165 @@ class RegAlloc (temp.TempMap):
             self.nodeDegreeTable[next] = 0
             next = nodes.tail.head
     
+    def Build(self) -> None:
+        nodeList : graph.NodeList = self.assemFlowGraph.nodes()
+        node = nodeList.head
+        while node!=None:
+            live : List[temp.Temp] = self.livenessOutput.out_node_table[node][:]
+            isMoveInstruction : bool = self.assemFlowGraph.isMove(node)
+
+            if isMoveInstruction:
+                useslst : temp.TempList = self.assemFlowGraph.use(node).head
+                uses = useslst.head
+                while uses!=None:
+                    live.remove(uses)
+                    uses = useslst.tail.head
+                useslst : temp.TempList = self.assemFlowGraph.use(node).head
+                uses = useslst.head
+                while uses!=None:
+                    self.moveNodesList(self.livenessOutput.tnode(uses)).add(node);
+                    uses = useslst.tail.head
+
+                defslst : temp.TempList = self.assemFlowGraph.deff(node).head
+                defs =defslst.head
+                while defs!=None:
+                    self.moveNodesList(self.livenessOutput.tnode(defs)).add(node);
+                    defs = defslst.tail.head
+                self.worklistMoveNodes.append(node)
+
+            defslst : temp.TempList = self.assemFlowGraph.deff(node).head
+            defs =defslst.head
+            while defs!=None:
+                live.append(defs)
+                defs = defslst.tail.head
+            
+            defslst : temp.TempList = self.assemFlowGraph.deff(node).head
+            defs =defslst.head
+            while defs!=None:
+                for liveTemp in live:
+                    AddEdge(liveTemp,defs)
+                defs = defslst.tail.head
+
+    def MakeWorkList(self) -> None:
+        K : int = len(self.preColoredNodes)
+        for n in self.initialNodes:
+            self.initialNodes.remove(n)
+            if self.nodeDegreeTable(n) >=K:
+                self.spillWorklist.append(n)
+            elif MoveRelated(n):
+                self.freezeWorklist.append(n)
+            else:
+                self.simplifyWorklist.append(n)
+
     def temp_map(self, temp: temp.Temp) -> str:
         #TODO
         return temp.to_string()
     
+    def Simplify(self) -> None:
+        n : graph.Node = self.simplifyWorklist[0]
+        self.simplifyWorklist.remove(n)
+        self.nodeStack.append(n)
+        for m in Adjacent(n):
+            DecrementDegree(m)
 
+    def Coalesce(self) -> None:
+        m : graph.Node = None
+        if(self.worklistMoveNodes[0]!=None):
+            m = self.worklistMoveNodes[0]
+            self.worklistMoveNodes.remove(m)
+        
+        x : graph.Node = GetAlias(self.livenessOutput.tnode(self.assemFlowGraph.instr(m).deff().head))
+        y : graph.Node = GetAlias(self.livenessOutput.tnode(self.assemFlowGraph.instr(m).use().head))
+
+        u : graph.Node
+        v : graph.Node
+
+        if y in self.preColoredNodes:
+            u=y
+            v=x
+        else:
+            u=x
+            v=y
+        
+        e : Edge=Edge.get_edge(u,v)
+        self.worklistMoveNodes.remove(m)
+
+        if u==v:
+            self.coalesceMoveNodes.append(m)
+            AddWorklist(u)
+        elif v in self.preColoredNodes or e in self.adjacenceSets:
+            self.constrainMoveNodes.appennd(m)
+            AddWorklist(u)
+            AddWorklist(v)
+
+        elif CoalesceAuxiliarFirstChecking(u, v) or CoalesceAuxiliarSecondChecking(u, v):
+            self.coalesceMoveNodes.append(m)
+            Combine(u,v)
+            AddWorklist(u)
+        else:
+            self.activeMoveNodes.append(m)
+    
+    def CoalesceAuxiliarFirstChecking(self,u : graph.Node, v : graph.Node) -> bool:
+        if u not in self.preColoredNodes:
+            return False
+        for t in Adjacent(v):
+            if not self.OK(t,u):
+                return False
+        return True
+
+    def OK(self, t : graph.Node, r : graph.Node) -> bool:
+        K : int = len(self.preColoredNodes)
+        result : bool = t in self.preColoredNodes or nodeDegreeTable(t) < K or Edge.get_edge(t, r) in self.adjacenceSets
+        return result
+    
+    def CoalesceAuxiliarSecondChecking(self, u : graph.Node, v : graph.Node) -> bool:
+        if(u in self.preColoredNodes):
+            return False
+        adjacent : List[graph.Node] = Adjacent(u)
+        for adj in Adjacent(v):
+            adjacent.append(adj)
+        return Conservative(adjacent)
+
+    def Freeze(self) -> None:
+        u : graph.Node = self.freezeWorklist[0]
+        self.freezeWorklist.remove(u)
+        self.simplifyWorklist.append(u)
+        self.FreezeMoves(u)
+
+    def FreezeMoves(self, u : graph.Node) -> None:
+        K : int = len(self.preColoredNodes)
+        for m in NodeMoves(u):
+            x : graph.Node = self.livenessOutput.tnode(self.assemFlowGraph.deff(m).head)
+            y : graph.Node = self.livenessOutput.tnode(self.assemFlowGraph.use(m).head)
+
+            v : graph.Node
+
+            if GetAlias(u) == GetAlias(y):
+                v = GetAlias(x)
+            
+            else:
+                v = GetAlias(y)
+            
+            self.activeMoveNodes.remove(m)
+            self.freezeMoveNodes.append(m)
+
+            if len(NodeMoves(v)) == 0 and nodeDegreeTable(v) < K:
+                self.freezeWorklist.remove(v)
+                self.simplifyWorklist.append(v)
+
+    def SelectSpill(self) -> None:
+        m : graph.Node = self.spillWorklist[0]
+        v : int = self.spillCost[m]
+
+        for a in self.spillWorklist:
+            if self.spillCost[a] < v:
+                m = a
+
+        self.spillWorklist.remove(m)
+        self.simplifyWorklist.append(m)
+        FreezeMoves(m)
+
+    
 class Color(temp.TempMap):
     def __init__(self, ig: InterferenceGraph, initial: temp.TempMap, registers: temp.TempList):
         #TODO
