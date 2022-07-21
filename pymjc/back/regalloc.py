@@ -38,6 +38,58 @@ class RegAlloc (temp.TempMap):
         self.assemFlowGraph = flowgraph.AssemFlowGraph(self.instrs)
         self.livenessOutput = Liveness(self.assemFlowGraph)
 
+    def Init(self) -> None:
+        self.preColoredNodes.clear();
+        self.normalColoredNodes.clear();
+
+        self.initialNodes.clear();
+        self.spillNodes.clear();
+        self.coalesceNodes.clear();
+
+        self.nodeStack.clear();
+
+        self.simplifyWorklist.clear();
+        self.freezeWorklist.clear();
+        self.spillWorklist.clear();
+
+        self.coalesceMoveNodes.clear();
+        self.constrainMoveNodes.clear();
+        self.freezeMoveNodes.clear();
+        self.activeMoveNodes.clear();
+
+        self.spillCost.clear();
+
+        self.adjacenceSets.clear();
+        self.adjacenceList.clear();
+
+        self.moveNodesList.clear();
+
+        self.nodeAliasTable.clear();
+        self.nodeColorTable.clear();
+        self.nodeDegreeTable.clear();
+
+        for counter in range(0, self.frame.registers().size()):
+            temp : temp.Temp = self.frame.registers()[counter]
+            node : graph.Node = self.livenessOutput.tnode(temp)
+
+            self.preColoredNodes.append(node)
+            self.spillCost[node] = "inf"
+
+            self.nodeColorTable[node] = node
+            self.nodeDegreeTable[node] = 0
+        nodes : graph.NodeList = self.livenessOutput.nodes()
+        next = nodes.head
+        while next!=None:
+            if next not in self.preColoredNodes:
+                self.initialNodes.append(next)
+
+                if self.livenessOutput.gtemp(next) in self.generatedSpillTemps:
+                    self.spillCost[next] = "inf"
+                elif next not in self.preColoredNodes:
+                    self.spillCost[next] = 1
+            self.nodeDegreeTable[next] = 0
+            next = nodes.tail.head
+    
     def temp_map(self, temp: temp.Temp) -> str:
         #TODO
         return temp.to_string()
