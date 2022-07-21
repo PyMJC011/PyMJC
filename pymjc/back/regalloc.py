@@ -1,12 +1,14 @@
 from __future__ import annotations
-from inspect import getabsfile
+from platform import node
 from tkinter.messagebox import NO
 from typing import *
 from abc import abstractmethod
 import sys
 from typing import Set
+
+from matplotlib.style import use
 from pymjc.back import assem, flowgraph, graph
-from pymjc.front import frame, temp
+from pymjc.front import frame, temp, tree, canon
 
 
 class RegAlloc (temp.TempMap):
@@ -15,10 +17,11 @@ class RegAlloc (temp.TempMap):
         self.instrs: assem.InstrList = instr_list
         self.preColoredNodes : List[graph.Node] 
         self.normalColoredNodes : List[graph.Node]
-        self. initialNodes = List[graph.Node]
+        self.initialNodes = List[graph.Node]
         self.spillNodes = List[graph.Node]
         self.coalesceNodes = List[graph.Node]
         self.nodeStack = List[graph.Node]
+        self.moveNodesList = Dict[graph.Node, List[graph.Node]]
         self.simplifyWorklist = List[graph.Node]
         self.freezeWorklist = List[graph.Node]
         self.spillWorklist = List[graph.Node]
@@ -128,7 +131,7 @@ class RegAlloc (temp.TempMap):
             defs =defslst.head
             while defs!=None:
                 for liveTemp in live:
-                    AddEdge(liveTemp,defs)
+                    self.AddEdge(liveTemp,defs)
                 defs = defslst.tail.head
 
     def MakeWorkList(self) -> None:
@@ -137,21 +140,23 @@ class RegAlloc (temp.TempMap):
             self.initialNodes.remove(n)
             if self.nodeDegreeTable(n) >=K:
                 self.spillWorklist.append(n)
-            elif MoveRelated(n):
+            elif self.MoveRelated(n):
                 self.freezeWorklist.append(n)
             else:
                 self.simplifyWorklist.append(n)
 
     def temp_map(self, temp: temp.Temp) -> str:
-        #TODO
-        return temp.to_string()
+        string : str = self.frame.temp_map(temp)
+        if string == "":
+            string = frame.TempMap(self.livenessOutput.gtemp(self.nodeColorTable[self.livenessOutput.tnode(temp)]))
+        return string
     
     def Simplify(self) -> None:
         n : graph.Node = self.simplifyWorklist[0]
         self.simplifyWorklist.remove(n)
         self.nodeStack.append(n)
-        for m in Adjacent(n):
-            DecrementDegree(m)
+        for m in self.Adjacent(n):
+            self.DecrementDegree(m)
 
     def Coalesce(self) -> None:
         m : graph.Node = None
@@ -159,8 +164,8 @@ class RegAlloc (temp.TempMap):
             m = self.worklistMoveNodes[0]
             self.worklistMoveNodes.remove(m)
         
-        x : graph.Node = GetAlias(self.livenessOutput.tnode(self.assemFlowGraph.instr(m).deff().head))
-        y : graph.Node = GetAlias(self.livenessOutput.tnode(self.assemFlowGraph.instr(m).use().head))
+        x : graph.Node = self.GetAlias(self.livenessOutput.tnode(self.assemFlowGraph.instr(m).deff().head))
+        y : graph.Node = self.GetAlias(self.livenessOutput.tnode(self.assemFlowGraph.instr(m).use().head))
 
         u : graph.Node
         v : graph.Node
@@ -177,39 +182,39 @@ class RegAlloc (temp.TempMap):
 
         if u==v:
             self.coalesceMoveNodes.append(m)
-            AddWorklist(u)
+            self.AddWorklist(u)
         elif v in self.preColoredNodes or e in self.adjacenceSets:
             self.constrainMoveNodes.appennd(m)
-            AddWorklist(u)
-            AddWorklist(v)
+            self.AddWorklist(u)
+            self.AddWorklist(v)
 
-        elif CoalesceAuxiliarFirstChecking(u, v) or CoalesceAuxiliarSecondChecking(u, v):
+        elif self.CoalesceAuxiliarFirstChecking(u, v) or self.CoalesceAuxiliarSecondChecking(u, v):
             self.coalesceMoveNodes.append(m)
-            Combine(u,v)
-            AddWorklist(u)
+            self.Combine(u,v)
+            self.AddWorklist(u)
         else:
             self.activeMoveNodes.append(m)
     
     def CoalesceAuxiliarFirstChecking(self,u : graph.Node, v : graph.Node) -> bool:
         if u not in self.preColoredNodes:
             return False
-        for t in Adjacent(v):
+        for t in self.Adjacent(v):
             if not self.OK(t,u):
                 return False
         return True
 
     def OK(self, t : graph.Node, r : graph.Node) -> bool:
         K : int = len(self.preColoredNodes)
-        result : bool = t in self.preColoredNodes or nodeDegreeTable(t) < K or Edge.get_edge(t, r) in self.adjacenceSets
+        result : bool = t in self.preColoredNodes or self.nodeDegreeTable(t) < K or Edge.get_edge(t, r) in self.adjacenceSets
         return result
     
     def CoalesceAuxiliarSecondChecking(self, u : graph.Node, v : graph.Node) -> bool:
         if(u in self.preColoredNodes):
             return False
-        adjacent : List[graph.Node] = Adjacent(u)
-        for adj in Adjacent(v):
+        adjacent : List[graph.Node] = self.Adjacent(u)
+        for adj in self.Adjacent(v):
             adjacent.append(adj)
-        return Conservative(adjacent)
+        return self.Conservative(adjacent)
 
     def Freeze(self) -> None:
         u : graph.Node = self.freezeWorklist[0]
@@ -219,22 +224,22 @@ class RegAlloc (temp.TempMap):
 
     def FreezeMoves(self, u : graph.Node) -> None:
         K : int = len(self.preColoredNodes)
-        for m in NodeMoves(u):
+        for m in self.NodeMoves(u):
             x : graph.Node = self.livenessOutput.tnode(self.assemFlowGraph.deff(m).head)
             y : graph.Node = self.livenessOutput.tnode(self.assemFlowGraph.use(m).head)
 
             v : graph.Node
 
-            if GetAlias(u) == GetAlias(y):
-                v = GetAlias(x)
+            if self.GetAlias(u) == self.GetAlias(y):
+                v = self.GetAlias(x)
             
             else:
-                v = GetAlias(y)
+                v = self.GetAlias(y)
             
             self.activeMoveNodes.remove(m)
             self.freezeMoveNodes.append(m)
 
-            if len(NodeMoves(v)) == 0 and nodeDegreeTable(v) < K:
+            if len(self.NodeMoves(v)) == 0 and self.nodeDegreeTable(v) < K:
                 self.freezeWorklist.remove(v)
                 self.simplifyWorklist.append(v)
 
@@ -248,7 +253,244 @@ class RegAlloc (temp.TempMap):
 
         self.spillWorklist.remove(m)
         self.simplifyWorklist.append(m)
-        FreezeMoves(m)
+        self.FreezeMoves(m)
+
+    def RewriteProgram(self) -> None:
+        accessTable : Dict[temp.Temp, frame.Access]
+        for v in self.spillNodes:
+            accessTable[self.livenessOutput.gtemp(v)] = self.frame.alloc_local(True)
+        
+        insnsPast : assem.InstrList = self.instrs
+        self.instrs = None
+        tailReference : assem.InstrList = self.instrs
+        
+        while insnsPast.head != None:
+            tempList : temp.TempList = insnsPast.head.use()
+            while tempList.head != None:
+                temp : temp.Temp = tempList.head
+                access : frame.Access = accessTable[temp]
+
+                if access != None:
+                    result : MemHeadTailTemp = self.genFetch(access,tempList.head)
+                    if self.instrs != None:
+                        tailReference.tail = result.head
+                    else:
+                        self.instrs = result.head
+                    tailReference = result.tail
+                tempList = tempList.tail
+            insnsPast = insnsPast.tail
+        
+        newInstrList : assem.InstrList= assem.InstrListt(insnsPast.head,None)
+
+        if self.instrs != None:
+            tailReference.tail = newInstrList
+            tailReference=tailReference.tail
+        else:
+            tailReference = newInstrList
+            self.instrs = tailReference
+
+        defTempList : temp.TempList = insnsPast.head.deff()
+        while defTempList!=None:
+            temp : temp.Temp = defTempList.head
+            access : frame.Access = accessTable[temp]
+
+            if access != None:
+                result : MemHeadTailTemp = self.genStore(access,defTempList.head)
+
+                if self.instrs:
+                    tailReference.tail = result.head
+                else:
+                    self.instrs=result.head
+                tailReference = result.tail
+                defTempList.head = result.temp  
+            defTempList = defTempList.tail.head.deff()
+
+    def genFetch(self,access : frame.Access,temp : temp.Temp) -> MemHeadTailTemp:
+        self.generatedSpillTemps.append(temp)
+
+        fetchInstr : tree.Stm = tree.MOVE(tree.TEMP(temp), access.exp(tree.TEMP(self.frame.FP())))
+        returnedHeadTailTemp : MemHeadTailTemp = MemHeadTailTemp(self.frame.codegen(canon.Canon.linearize(fetchInstr)), temp)
+
+        return returnedHeadTailTemp
+
+    def gendStore(self, access : frame.Access, temp : temp.Temp) -> MemHeadTailTemp:
+        self.generatedSpillTemps.append(temp)
+        s : tree.Stm = tree.MOVE(access.exp(tree.TEMP(self.frame.FP())),tree.TEMP(temp))
+
+        returnedHeadTailTemp : MemHeadTailTemp = MemHeadTailTemp(self.frame.codegen(canon.Canon.linearize(s)), temp)
+        return returnedHeadTailTemp
+
+    def FinalStep(self) -> None:
+        auxiliarInstrList : assem.InstrList = self.insns
+        instrListTail : assem.InstrList = None
+        self.instrs = None
+
+        while auxiliarInstrList!=None:
+            currentInstr : assem.Instr = auxiliarInstrList.head
+            if type(currentInstr) == assem.MOVE:
+                defTemp : temp.Temp = currentInstr.deff().head
+                useTemp : temp.Temp = currentInstr.use().head
+                if(self.GetAlias(self.livenessOutput.tnode(defTemp))== self.GetAlias(self.livenessOutput.tnode(useTemp))):
+                    continue
+            if self.instrs == None:
+                instrListTail = assem.InstrList(auxiliarInstrList.head, None)
+                self.instrs = instrListTail
+            else:
+                instrListTail.tail = assem.InstrList(auxiliarInstrList.head, None)
+                instrListTail=instrListTail.tail
+            auxiliarInstrList = auxiliarInstrList.tail
+
+    def adjacenceListMethod(self,node : graph.Node) -> List[graph.Node]:
+        returnedList : List[graph.Node] = self.adjacenceList[node]
+        if(returnedList==None):
+            returnedList : List[graph.Node]
+            self.adjacenceList[node]=returnedList
+        return returnedList
+
+    def nodeDegreeTableMethod(self,node : graph.Node) -> int:
+        degree : int = self.nodeDegreeTable[node]
+        return degree
+
+    def moveNodesListMethod(self,node : graph.Node):
+        if node == None:
+            raise Exception("Null node")
+        returnedMoveList : List[graph.Node] = self.moveNodesList[node]
+
+        if returnedMoveList == None:
+            returnedMoveList : List[graph.Node]
+            self.moveNodesList[node] = returnedMoveList
+        return returnedMoveList
+
+    def nodeAliasTableMethod(self,node : graph.Node) -> graph.Node:
+        returnedNode : graph.Node = self.nodeAliasTable[node]
+        return returnedNode
+
+    def GetAlias(self,node : graph.Node) -> graph.Node:
+        if not node in self.coalesceNodes:
+            return node
+
+        aliasNode : graph.Node = self.GetAlias(self.nodeAliasTableMethod(node))
+        return aliasNode
+
+    def nodeColorTabbleMethod(self, n : graph.Node) ->graph.Node:
+        nodeColor : graph.Node = self.nodeColorTable[n]
+        return nodeColor
+
+    def AddEdge(self,u : graph.Node, v: graph.Node) -> None:
+        e : Edge = Edge.get_edge(u,v)
+        e_reversed : Edge = Edge.get_edge(v,u)
+
+        if not e in self.adjacenceSets and e !=e_reversed:
+            self.adjacenceSets.append(e)
+            self.adjacenceSets.append(e_reversed)
+
+            if not u in self.preColoredNodes:
+                self.adjacenceListMethod(u).append(v)
+                self.nodeDegreeTable[u] = self.nodeDegreeTableMethod(u)+1 
+            if not v in self.preColoredNodes:
+                self.adjacenceListMethod(v).append(u)
+                self.nodeDegreeTable[v] = self.nodeDegreeTableMethod(v)+1 
+
+    def AddEdge(self,u_temp: temp.Temp, v_temp : temp.Temp) -> None:
+        if u_temp!=v_temp:
+            self.AddEdge(self.livenessOutput.tnode(u_temp),self.livenessOutput.tnode(v_temp))
+    
+    def NodeMovesMethod(self,node : graph.Node) -> List[graph.Node]:
+        nodeListCopy : List[graph.Node]
+        retain : List[graph.Node]
+        for nodes in self.activeMoveNodes:
+            nodeListCopy.append(nodes)
+        for nodes in self.worklistMoveNodes:
+            nodeListCopy.append(nodes)
+        for nodes in self.moveNodesList:
+            retain.append(nodes)
+        return retain
+
+    def MoveRelated(self, n : graph.Node) -> bool:
+        nodeMovesSize : int = len(self.NodeMoves(n))
+        return nodeMovesSize !=0 
+
+    def Adjacent(self, n : graph.Node) -> List[graph.Node]:
+        auxiliarUnionTable : List[graph.Node]
+        auxiliarRemainingTable : List[graph.Node]
+        for nodes in self.nodeStack:
+            auxiliarUnionTable.append(nodes)
+        for nodes in self.coalesceNodes:
+            auxiliarUnionTable.append(nodes)
+        for node in self.adjacenceListMethod(n):
+            auxiliarRemainingTable.append(node)
+        for node in auxiliarRemainingTable:
+            if node in auxiliarUnionTable:
+                auxiliarRemainingTable.remove(node)
+        return auxiliarRemainingTable
+      
+    def DecrementDegree(self, m : graph.Node) -> None:
+        if m in self.preColoredNodes:
+            return
+        d : int = self.nodeDegreeTableMethod(m)
+        self.nodeDegreeTable[m] = d-1
+
+        K : int = len(self.preColoredNodes)
+        if d==K:
+            adjacentUnionResult : List[graph.Node] = self.Adjacent(m)
+            adjacentUnionResult.append(m)
+
+            for auxiliarNode in adjacentUnionResult:
+                self.EnableMoves(auxiliarNode)
+            self.spillWorklist.remove(m)
+    
+    def AddWorkList(self, u : graph.Node) -> None:
+        if u not in self.preColoredNodes and not self.MoveRelated(u) and self.nodeDegreeTableMethod(u) < len(self.preColoredNodes):
+            self.freezeWorklist.remove(u)
+            self.simplifyWorklist.append(u)
+
+    def Conservative(self, nodes: List[graph.Node]):
+        k : int = 0
+        K : int = len(self.preColoredNodes)
+
+        for n in nodes:
+            if self.nodeDegreeTableMethod(n) >= K:
+                k+=1
+        return k<K
+
+    def Combine(self, u : graph.Node, v : graph.Node) -> None:
+        if v in self.freezeWorklist:
+            self.freezeWorklist.remove(v)
+        else:
+            self.spillWorklist.remove(v)
+
+        self.coalesceNodes.append(v)
+        self.nodeAliasTable[v] = u
+
+        for node in self.moveNodesListMethod(v):
+            self.moveNodesListMethod(u).append(node)
+        
+        self.EnableMoves(v)
+        for t in self. Adjacent(v):
+            self.AddEdge(t,u)
+            self.DecrementDegree(t)
+
+        if self.nodeDegreeTableMethod(u) >= len(self.preColoredNodes) and u in self.freezeWorklist:
+            self.freezeWorklist.remove(u)
+            self.spillWorklist.append(u)
+
+    def EnableMoves(self,nodes : graph.Node) -> None:
+        for n in self.NodeMovesMethod(nodes):
+            if n in self.activeMoveNodes:
+                self.activeMoveNodes.remove(n)
+                self.worklistMoveNodes.append(n)
+
+class MemHeadTailTemp:
+    def __init__(self,instrList: assem.InstrList, temp : temp.Temp) -> None:
+        self.head : assem.InstrList = instrList
+        self.temp = temp
+        tail = self.tail()
+    
+    def tail(self) -> assem.InstrList:
+        instrList : assem.InstrList = self.head
+        return instrList[-1]
+
+
 
     
 class Color(temp.TempMap):
@@ -306,9 +548,11 @@ class Liveness (InterferenceGraph):
         #Move list
         self.move_list: MoveList = None
 
-        self.build_gen_and_kill()
-        self.build_in_and_out()
-        self.build_interference_graph()
+
+        #feito em Build()
+        #self.build_gen_and_kill()
+        #self.build_in_and_out()
+        #self.build_interference_graph()
     
     def add_ndge(self, source_node: graph.Node, destiny_node: graph.Node):
         if (source_node is not destiny_node and not destiny_node.comes_from(source_node) and not source_node.comes_from(destiny_node)):
