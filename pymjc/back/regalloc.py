@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import *
 from abc import abstractmethod
 import sys
 from typing import Set
@@ -10,11 +11,32 @@ class RegAlloc (temp.TempMap):
     def __init__(self, frame: frame.Frame, instr_list: assem.InstrList):
         self.frame: frame.Frame = frame
         self.instrs: assem.InstrList = instr_list
+        self.preColoredNodes : List[graph.Node] 
+        self.normalColoredNodes : List[graph.Node]
+        self. initialNodes = List[graph.Node]
+        self.spillNodes = List[graph.Node]
+        self.coalesceNodes = List[graph.Node]
+        self.nodeStack = List[graph.Node]
+        self.simplifyWorklist = List[graph.Node]
+        self.freezeWorklist = List[graph.Node]
+        self.spillWorklist = List[graph.Node]
+        self.coalesceMoveNodes = List[graph.Node]
+        self.constrainMoveNodes = List[graph.Node]
+        self.freezeMoveNodes = List[graph.Node]
+        self.worklistMoveNodes = List[graph.Node]
+        self.activeMoveNodes = List[graph.Node]
+        self.spillCost = Dict[graph.Node, int]
+        self.adjacenceSets = List[Edge]
+        self.adjacenceList = Dict[graph.Node, List[graph.Node]]
+        self.nodeDegreeTable = Dict[graph.Node, int]
+        self.nodeAliasTable = Dict[graph.Node, graph.Node]
+        self.nodeColorTable = Dict[graph.Node, graph.Node]
+        self.generatedSpillTemps = List[temp.Temp]
         #TODO
 
     def LivenessAnalisys(self) -> None:
         self.assemFlowGraph = flowgraph.AssemFlowGraph(self.instrs)
-        self.livinessOutput = Liveness(self.assemFlowGraph)
+        self.livenessOutput = Liveness(self.assemFlowGraph)
 
     def temp_map(self, temp: temp.Temp) -> str:
         #TODO
