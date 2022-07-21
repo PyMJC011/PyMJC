@@ -75,10 +75,12 @@
 2. A etapa foi completamente ou parcialmente concluída?
 
     > Parcialmente concluída
+    > 2º entrega: Completamente concluída
 
 3. No caso de parcialmente concluída, o que não foi concluído?
 
     > Não foi concluída a implementação dos seguintes visitors: array_assign, new_array, if, while, print, identifier, identifier_exp
+    > 2º entrega: não se aplica.
 
 4. O programa passa nos testes automatizados?
     
@@ -91,7 +93,8 @@
 6. Quais as dificuldades encontradas para realização da etapa do projeto?
     
     > As dificuldades foram em conseguir utilizar o framework do projeto, pois as implementações diferem das aulas do Prof. Heron e das implementações já existentes nos livros e site da Cambridge, além de que as implementações do Prof. Heron também são diferentes que essas outras implementações.
-
+    > 2º entrega: com as novas implementações do framework, ficou mais fácil de reproduzir as implementações dos visitors, logo a dificuldade foi entender visit_call e visit_new_object, pois estas diferem muito nos livros e nas aulas, logo foi consumido muito tempo para saber se esses dois visitors estavam implementados parcialmente ou não.  
+    
 7. Qual a participação de cada membro da equipe na etapa de execução?
     
     > Ambos fizeram o trabalho em conjunto.
@@ -101,31 +104,31 @@
 
 1. Qual é o nome do relator?
 
-    > Escreva sua resposta aqui
+    > Samuel Vieira de Paula Farias
 
 2. A etapa foi completamente ou parcialmente concluída?
 
-    > Escreva sua resposta aqui
+    > Parcialmente concluída.
 
 3. No caso de parcialmente concluída, o que não foi concluído?
 
-    > Escreva sua resposta aqui
+    > Resta escrever os demais métodos para cores fora AssignColors; não foram feito os métodos de Simplify, Coalesce, Freeze e Spill e relacionados;
 
 4. O programa passa nos testes automatizados?
     
-    > Escreva sua resposta aqui
+    > ...
 
 5. Algum erro de execução foi encontrado para alguma das entradas? Quais?
     
-    > Escreva sua resposta aqui
+    > ...
 
 6. Quais as dificuldades encontradas para realização da etapa do projeto?
     
-    > Escreva sua resposta aqui
+    > Faltou tempo para implementar os métodos do arquivo .java, pois muitos deles utilizaram estratégias diferentes das utilizadas pelo framework, além de muitas implementações eram para ser feitas do zero (apesar de existirem no .java como base). Além disso, um dos membros adoeceu.
 
 7. Qual a participação de cada membro da equipe na etapa de execução?
     
-    > Escreva sua resposta aqui
+    > Ambos fizeram o trabalho em conjunto.
 
 
 # 5º Relatóio: Etapa AI-e (Alocação de Registradores)
