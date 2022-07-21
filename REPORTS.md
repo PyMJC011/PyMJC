@@ -108,7 +108,7 @@
 
 2. A etapa foi completamente ou parcialmente concluída?
 
-    > Parcialmente concluída.
+    > Totalmente concluída.
 
 3. No caso de parcialmente concluída, o que não foi concluído?
 
@@ -116,15 +116,15 @@
 
 4. O programa passa nos testes automatizados?
     
-    > ...
+    > Não foi testado.
 
 5. Algum erro de execução foi encontrado para alguma das entradas? Quais?
     
-    > ...
+    > Não se aplica.
 
 6. Quais as dificuldades encontradas para realização da etapa do projeto?
     
-    > Faltou tempo para implementar os métodos do arquivo .java, pois muitos deles utilizaram estratégias diferentes das utilizadas pelo framework, além de muitas implementações eram para ser feitas do zero (apesar de existirem no .java como base). Além disso, um dos membros adoeceu.
+    > Adaptar certas implementações feitas no regAlloc.java para python. Além disso, um dos membros adoeceu.
 
 7. Qual a participação de cada membro da equipe na etapa de execução?
     
