@@ -2,10 +2,8 @@ from contextlib import nullcontext
 import itertools
 from typing import List
 from pymjc.back import assem
-from pymjc.front import frame
+from pymjc.front import frame, temp, tree
 from pymjc.front.symbol import Symbol
-from pymjc.front import temp
-from pymjc.front import tree
 from pymjc.util import BoolList
 
 class InFrame(frame.Access):
@@ -448,7 +446,7 @@ class MipsFrame(frame.Frame):
     def alloc_local(self, escape: bool) -> frame.Access:
         if escape:
             result = InFrame(self.offset)
-            offser -= MipsFrame.word_size
+            self.offset -= MipsFrame.word_size
             return result
         else:
             return InReg(temp.Temp())
